@@ -19,10 +19,10 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/Carmen-Shannon/gopus"
 	"github.com/bwmarrin/discordgo"
 	"github.com/dayvillefire/dgvoice/mpg123"
 	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
-	"layeh.com/gopus"
 )
 
 // NOTE: This API is not final and these are likely to change.
@@ -83,7 +83,8 @@ func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) {
 		}
 
 		// try encoding pcm frame with Opus
-		opus, err := opusEncoder.Encode(recv, frameSize, maxBytes)
+		var opus []byte
+		_, err = opusEncoder.Encode(recv, frameSize, opus)
 		if err != nil {
 			OnError("Encoding Error", err)
 			return
@@ -132,7 +133,7 @@ func ReceivePCM(v *discordgo.VoiceConnection, c chan *discordgo.Packet) {
 			}
 		}
 
-		p.PCM, err = speakers[p.SSRC].Decode(p.Opus, 960, false)
+		_, err = speakers[p.SSRC].Decode(p.Opus, 960, false, p.PCM)
 		if err != nil {
 			OnError("Error decoding opus data", err)
 			continue

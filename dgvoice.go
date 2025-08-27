@@ -83,14 +83,14 @@ func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) {
 		}
 
 		// try encoding pcm frame with Opus
-		var opus []byte
-		_, err = opusEncoder.Encode(recv, frameSize, opus)
+		buf := make([]byte, maxBytes)
+		opus, err := opusEncoder.Encode(recv, frameSize, buf)
 		if err != nil {
 			OnError("Encoding Error", err)
 			return
 		}
 
-		if v.Ready == false || v.OpusSend == nil {
+		if !v.Ready || v.OpusSend == nil {
 			// OnError(fmt.Sprintf("Discordgo not ready for opus packets. %+v : %+v", v.Ready, v.OpusSend), nil)
 			// Sending errors here might not be suited
 			return
@@ -110,7 +110,7 @@ func ReceivePCM(v *discordgo.VoiceConnection, c chan *discordgo.Packet) {
 	var err error
 
 	for {
-		if v.Ready == false || v.OpusRecv == nil {
+		if !v.Ready || v.OpusRecv == nil {
 			OnError(fmt.Sprintf("Discordgo not to receive opus packets. %+v : %+v", v.Ready, v.OpusSend), nil)
 			return
 		}

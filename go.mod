@@ -4,12 +4,14 @@ go 1.24.2
 
 toolchain go1.24.3
 
+replace github.com/dayvillefire/dgvoice/mpg123 => ./mpg123
+
 require (
 	github.com/Carmen-Shannon/gopus v1.0.0
 	github.com/bobertlo/go-mpg123 v0.0.0-20211210004329-c83f21a0fd39
 	github.com/bwmarrin/dgvoice v0.0.0-20210225172318-caaac756e02e
 	github.com/bwmarrin/discordgo v0.29.0
-	github.com/dayvillefire/dgvoice/mpg123 v0.0.0-20250620120559-cfee19e54335
+	github.com/dayvillefire/dgvoice/mpg123 v0.0.0-20250827184712-8ccad88ca83b
 	github.com/hajimehoshi/ebiten/v2 v2.8.8
 	github.com/skit-ai/godub v0.1.0
 )

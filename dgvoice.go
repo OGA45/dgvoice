@@ -217,11 +217,6 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop chan bool
 			ffmpegout.Close()
 		case <-done:
 			log.Printf("done received, killing ffmpeg")
-			err = run.Process.Kill()
-			if err != nil {
-				OnError("Couldn't kill ffmpeg process", err)
-			}
-			ffmpegout.Close()
 		}
 	}()
 

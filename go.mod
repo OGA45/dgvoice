@@ -6,6 +6,8 @@ toolchain go1.24.3
 
 replace github.com/dayvillefire/dgvoice/mpg123 => ./mpg123
 
+replace github.com/bwmarrin/discordgo => github.com/ozraru/discordgo v0.26.2-0.20250917201847-e6ee88434661
+
 require (
 	github.com/Carmen-Shannon/gopus v1.0.0
 	github.com/bwmarrin/discordgo v0.29.0

@@ -11,7 +11,6 @@ package dgvoice
 import (
 	"bufio"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -57,8 +56,8 @@ var OnError = func(str string, err error) {
 
 // SendPCM will receive on the provied channel encode
 // received PCM data into Opus then send that to Discordgo
-func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) {
-	defer log.Printf("SendPCM finished for %s", v.ChannelID)
+func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16, channelId string) {
+	defer log.Printf("SendPCM finished for %s", channelId)
 
 	if pcm == nil {
 		return
@@ -89,8 +88,7 @@ func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) {
 			OnError("Encoding Error", err)
 			return
 		}
-
-		if !v.Ready || v.OpusSend == nil {
+		if v.Status != discordgo.VoiceConnectionStatusReady || v.OpusSend == nil {
 			// OnError(fmt.Sprintf("Discordgo not ready for opus packets. %+v : %+v", v.Ready, v.OpusSend), nil)
 			// Sending errors here might not be suited
 			return
@@ -100,53 +98,10 @@ func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16) {
 	}
 }
 
-// ReceivePCM will receive on the the Discordgo OpusRecv channel and decode
-// the opus audio into PCM then send it on the provided channel.
-func ReceivePCM(v *discordgo.VoiceConnection, c chan *discordgo.Packet) {
-	if c == nil {
-		return
-	}
-
-	var err error
-
-	for {
-		if !v.Ready || v.OpusRecv == nil {
-			OnError(fmt.Sprintf("Discordgo not to receive opus packets. %+v : %+v", v.Ready, v.OpusSend), nil)
-			return
-		}
-
-		p, ok := <-v.OpusRecv
-		if !ok {
-			return
-		}
-
-		if speakers == nil {
-			speakers = make(map[uint32]*gopus.Decoder)
-		}
-
-		_, ok = speakers[p.SSRC]
-		if !ok {
-			speakers[p.SSRC], err = gopus.NewDecoder(48000, 2)
-			if err != nil {
-				OnError("error creating opus decoder", err)
-				continue
-			}
-		}
-
-		_, err = speakers[p.SSRC].Decode(p.Opus, 960, false, p.PCM)
-		if err != nil {
-			OnError("Error decoding opus data", err)
-			continue
-		}
-
-		c <- p
-	}
-}
-
 // PlayAudioFile will play the given filename to the already connected
 // Discord voice server/channel.  voice websocket and udp socket
 // must already be setup before this will work.
-func PlayAudioFileInternal(v *discordgo.VoiceConnection, filename string, stop chan bool) {
+func PlayAudioFileInternal(v *discordgo.VoiceConnection, filename string, stop chan bool, channelId string) {
 	defer log.Printf("PlayAudioFileInternal finished for %s", filename)
 	defer func() {
 		stop <- true
@@ -184,7 +139,7 @@ func PlayAudioFileInternal(v *discordgo.VoiceConnection, filename string, stop c
 
 	close := make(chan bool)
 	go func() {
-		SendPCM(v, send)
+		SendPCM(v, send, channelId)
 		close <- true
 	}()
 
@@ -213,7 +168,7 @@ func PlayAudioFileInternal(v *discordgo.VoiceConnection, filename string, stop c
 // PlayAudioFile will play the given filename to the already connected
 // Discord voice server/channel.  voice websocket and udp socket
 // must already be setup before this will work.
-func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop chan bool) {
+func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop chan bool, channelId string) {
 	defer log.Printf("PlayAudioFile finished for %s", filename)
 	defer func() {
 		stop <- true
@@ -289,7 +244,7 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop chan bool
 
 	close := make(chan bool)
 	go func() {
-		SendPCM(v, send)
+		SendPCM(v, send, channelId)
 		close <- true
 	}()
 

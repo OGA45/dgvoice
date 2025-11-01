@@ -103,9 +103,6 @@ func SendPCM(v *discordgo.VoiceConnection, pcm <-chan []int16, channelId string)
 // must already be setup before this will work.
 func PlayAudioFileInternal(v *discordgo.VoiceConnection, filename string, stop chan bool, channelId string) {
 	defer log.Printf("PlayAudioFileInternal finished for %s", filename)
-	defer func() {
-		stop <- true
-	}()
 
 	inFile, err := os.Open(filename)
 	if err != nil {
@@ -188,36 +185,16 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop chan bool
 	err = run.Start()
 	if err != nil {
 		OnError("RunStart Error", err)
-		ffmpegout.Close()
 		return
 	}
 
 	// prevent memory leak from residual ffmpeg streams
-	defer func() {
-		log.Printf("Waiting for ffmpeg to finish")
-		err = run.Wait()
-		if err != nil {
-			OnError("RunWait Error", err)
-		}
-		log.Printf("ffmpeg finished")
-		run.Process.Kill()
-		ffmpegout.Close()
-	}()
-
-	// Stop goroutine when audio is done playing
-	done := make(chan struct{})
-	defer close(done)
+	defer run.Process.Kill()
 
 	//when stop is sent, kill ffmpeg
 	go func() {
-		select {
-		case <-stop:
-			log.Printf("stop received, killing ffmpeg")
-			err = run.Process.Kill()
-			ffmpegout.Close()
-		case <-done:
-			log.Printf("done received, killing ffmpeg")
-		}
+		<-stop
+		err = run.Process.Kill()
 	}()
 
 	// Send "speaking" packet over the voice websocket
@@ -259,9 +236,6 @@ func PlayAudioFile(v *discordgo.VoiceConnection, filename string, stop chan bool
 		select {
 		case send <- audiobuf:
 		case <-close:
-			log.Printf("close received, stopping playback")
-			err = run.Process.Kill()
-			ffmpegout.Close()
 			return
 		}
 	}
